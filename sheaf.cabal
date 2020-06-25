@@ -1,0 +1,68 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 77fd95b3a5c37a2fd0beda7f2ac0f6c134d2dbff8f3eb4b21859c93e033d99e8
+
+name:           sheaf
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/sheaf#readme>
+homepage:       https://github.com/githubuser/sheaf#readme
+bug-reports:    https://github.com/githubuser/sheaf/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2020 Author name here
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/sheaf
+
+library
+  exposed-modules:
+      Lib
+  other-modules:
+      Paths_sheaf
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , bytestring
+    , sdl2
+  default-language: Haskell2010
+
+executable sheaf-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_sheaf
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , bytestring
+    , sdl2
+    , sheaf
+  default-language: Haskell2010
+
+test-suite sheaf-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_sheaf
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , bytestring
+    , sdl2
+    , sheaf
+  default-language: Haskell2010
