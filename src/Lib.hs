@@ -10,7 +10,7 @@ import Data.Word
 import GHC.Float
 import Control.Monad
 import Control.Monad.ST
-import Data.STRef
+import Data.Array.ST
 
 
 --- SCENE ---
@@ -36,35 +36,21 @@ basicScene = Scene $ map (\x -> Point (int2Float x) 300.0 10.0 red)
 data ScreenConfig = ScreenConfig { screenWidth :: Int
                                  , screenHeight :: Int
                                  }
-draw :: ScreenConfig -> Scene -> ByteString
-draw scfg scn = runST $ do
-    screen <- newSTRef $ blankScreen scfg
-
-    forM_ (scenePoints scn) $ modifySTRef screen . drawPoint
-
-    flatpack <$> readSTRef screen
-    where drawPoint p = setPixel x y col
-            where (x, y) = (float2Int $ px p, float2Int $ py p)
-                  col = pcolor p
-
-
---- SCREEN ---
-
-type Screen = [[Pixel]]
 data Pixel = Pixel { r :: Word8, g :: Word8, b :: Word8 }
 type Color = Pixel
 
-blankScreen :: ScreenConfig -> Screen
-blankScreen scfg = Prelude.replicate h (Prelude.replicate w blackPixel)
-    where w = screenWidth scfg
-          h = screenHeight scfg
-          blackPixel = Pixel 0 0 0
+draw :: ScreenConfig -> Scene -> ByteString
+draw scfg scn = B.pack $ concatMap p2words $ runST $ do
+    let (w, h) = (screenWidth scfg, screenHeight scfg)
+    screen <- newArray (0, w * h) (Pixel 0 0 0) :: ST s (STArray s Int Pixel)
 
-flatpack :: Screen -> ByteString
-flatpack scr = B.pack $ concatMap p2words $ concat scr
-    where p2words (Pixel r g b) = [b, g, r, 255] -- convert to BGRA8888
+    forM_ (scenePoints scn) $ \p -> do
+        let (x, y) = (float2Int $ px p, float2Int $ py p)
+        setPixel w x y (pcolor p) screen
 
-setPixel :: Int -> Int -> Color -> Screen -> Screen
-setPixel x y = set2d y x
-    where set2d y x col scr = set y (set x col (scr !! y)) scr
-          set i x xs = take i xs ++ [x] ++ drop (i+1) xs
+    getElems screen
+
+    where setPixel w x y col screen = writeArray screen (x + w*y) col
+          p2words (Pixel r g b) = [b, g, r, 255] -- convert to BGRA8888
+
+-- WANT: ByteString constructor that takes an array and a (e -> [Word8]).

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 77fd95b3a5c37a2fd0beda7f2ac0f6c134d2dbff8f3eb4b21859c93e033d99e8
+-- hash: 7d4fab8be2e5ed0e31691df341d693035866ef6ef70845dcb16c2bae5143978b
 
 name:           sheaf
 version:        0.1.0.0
@@ -33,7 +33,8 @@ library
   hs-source-dirs:
       src
   build-depends:
-      base >=4.7 && <5
+      array
+    , base >=4.7 && <5
     , bytestring
     , sdl2
   default-language: Haskell2010
@@ -46,7 +47,8 @@ executable sheaf-exe
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      array
+    , base >=4.7 && <5
     , bytestring
     , sdl2
     , sheaf
@@ -61,7 +63,8 @@ test-suite sheaf-test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      array
+    , base >=4.7 && <5
     , bytestring
     , sdl2
     , sheaf
