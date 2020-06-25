@@ -8,10 +8,13 @@ import qualified Data.ByteString as B
 import Data.ByteString (ByteString)
 import Data.Word
 import GHC.Float
+import Control.Monad
+import Control.Monad.ST
+import Data.STRef
 
 
 --- SCENE ---
-data Scene = Scene { scenePoint :: Point
+data Scene = Scene { scenePoints :: [Point]
                    }
 data Tri = Tri { t1 :: Point
                , t2 :: Point
@@ -24,7 +27,9 @@ data Point = Point { px :: Float
                    }
 
 basicScene :: Scene
-basicScene = Scene $ Point 200.0 300.0 10.0 $ Pixel 255 0 0
+basicScene = Scene $ map (\x -> Point (int2Float x) 300.0 10.0 red)
+                         [200, 250, 300, 350, 400, 450]
+    where red = Pixel 255 0 0
 
 --- DRAW ---
 
@@ -32,10 +37,15 @@ data ScreenConfig = ScreenConfig { screenWidth :: Int
                                  , screenHeight :: Int
                                  }
 draw :: ScreenConfig -> Scene -> ByteString
-draw scfg scn = flatpack $ etch scn $ blankScreen scfg
-    where etch scn scr = setPixel x y (pcolor p) scr
-          p = scenePoint scn
-          (x, y) = (float2Int $ px p, float2Int $ py p)
+draw scfg scn = runST $ do
+    screen <- newSTRef $ blankScreen scfg
+
+    forM_ (scenePoints scn) $ modifySTRef screen . drawPoint
+
+    flatpack <$> readSTRef screen
+    where drawPoint p = setPixel x y col
+            where (x, y) = (float2Int $ px p, float2Int $ py p)
+                  col = pcolor p
 
 
 --- SCREEN ---
