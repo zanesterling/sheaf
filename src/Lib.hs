@@ -8,6 +8,7 @@ module Lib
 
 import qualified Data.ByteString as B
 import Data.ByteString (ByteString)
+import Data.List (sortBy)
 import Data.Word
 import GHC.Float
 import Control.Monad
@@ -36,7 +37,7 @@ data Point = Point { px :: Float
 basicScene :: Scene
 basicScene = Scene points lines triangles
     where
-        points = map (\x -> pt2d x 300 white) [200, 250, 300, 350, 400, 450]
+        points = map (\x -> pt2d x 400 white) [100, 150 .. 350]
         lines = [ (pt2d 100 100 red, pt2d 200 120 white)
                 , (pt2d 100 100 red, pt2d 200  80 white)
                 , (pt2d 100 100 red, pt2d 000 120 white)
@@ -46,7 +47,11 @@ basicScene = Scene points lines triangles
                 , (pt2d 100 100 red, pt2d  80 200 white)
                 , (pt2d 100 100 red, pt2d  80 000 white)
                 ]
-        triangles = [ Triangle (pt2d 400 100 red) (pt2d 450 50 white) (pt2d 470 150 blue) ]
+        triangles = [ Triangle (pt2d 400 100 red) (pt2d 450  50 white) (pt2d 470 150 blue)
+                    , Triangle (pt2d 400 200 red) (pt2d 450 150 white) (pt2d 470 200 blue)
+                    , Triangle (pt2d 400 250 red) (pt2d 420 300 white) (pt2d 470 250 blue)
+                    , Triangle (pt2d 400 300 red) (pt2d 420 400 white) (pt2d 470 350 blue)
+                    ]
         pt2d x y = Point (i2f x) (i2f y) 0.0
         red = Pixel 255 0 0
         white = Pixel 255 255 255
@@ -109,10 +114,43 @@ bresenham setpx (x1, y1, c1) (x2, y2, c2) =
 
 drawTriangle :: Pen s -> Triangle -> ST s ()
 drawTriangle p (Triangle p1 p2 p3) = do
-    drawLine p (p1, p2)
-    drawLine p (p2, p3)
-    drawLine p (p3, p1)
+    let [top, mid, bot] = sortUnder py [p1, p2, p3]
+        m = (py mid - py top) / (py bot - py top)
+        mid' = lerp top bot m
+    fillFlatTriangle p top mid mid'
+    fillFlatTriangle p mid mid' bot
 
+-- TODO: Seems to be a rounding error glitch with the right side of flat-topped
+-- triangles. There are cut-in tooth marks.
+fillFlatTriangle :: Pen s -> Point -> Point -> Point -> ST s ()
+fillFlatTriangle p t m b
+    | py t == py m && py m == py b =
+        return ()
+    | py m == py b =
+        let [bl, br] = sortUnder px [m, b]
+        in fillTrapezoid p (t, t) (bl, br)
+    | otherwise =
+        let [tl, tr] = sortUnder px [t, m]
+        in fillTrapezoid p (tl, tr) (b, b)
+
+fillTrapezoid :: Pen s -> (Point, Point) -> (Point, Point) -> ST s ()
+fillTrapezoid setpx (l1, r1) (l2, r2) =
+    forM_ [py l1 .. py l2] $ \y ->
+        let m = (y - py l1) / (py l2 - py l1)
+            xl = lerp (px l1) (px l2) m
+            xr = lerp (px r1) (px r2) m
+            cl = lerp (pcolor l1) (pcolor l2) m
+            cr = lerp (pcolor r1) (pcolor r2) m
+        in fillRow y xl xr cl cr
+    where
+        fillRow y x1 x2 c1 c2 = do
+            setpx (f2i x1) (f2i y) (lerp c1 c2 0.5)
+            forM_ [x1 .. x2] $ \x ->
+             let m = (x - x1) / (x2 - x1)
+             in setpx (f2i x) (f2i y) (lerp c1 c2 m)
+
+sortUnder :: Ord b => (a -> b) -> [a] -> [a]
+sortUnder f = sortBy (\a b -> f a `compare` f b)
 
 -- WANT: ByteString constructor that takes an array and a (e -> [Word8]).
 
@@ -121,9 +159,8 @@ class Lerpy l where lerp :: l -> l -> Float -> l
 w2f = i2f . fromIntegral
 f2w = fromIntegral . f2i
 
-instance Lerpy Float where lerp x y p = x*(p-1) + y*p
-instance Lerpy Word8 where
-    lerp x y p = f2w (w2f x * (1-p) + w2f y * p)
+instance Lerpy Float where lerp x y p = x*(1-p) + y*p
+instance Lerpy Word8 where lerp x y p = f2w $ lerp (w2f x) (w2f y) p
 instance Lerpy Pixel where
     lerp (Pixel r1 g1 b1) (Pixel r2 g2 b2) p =
         Pixel (lerp r1 r2 p) (lerp g1 g2 p) (lerp b1 b2 p)
