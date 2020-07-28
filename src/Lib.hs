@@ -21,11 +21,12 @@ i2f = int2Float
 --- SCENE ---
 data Scene = Scene { scenePoints    :: [Point]
                    , sceneLines     :: [(Point, Point)]
+                   , sceneTriangles :: [Triangle]
                    }
-data Tri = Tri { t1 :: Point
-               , t2 :: Point
-               , t3 :: Point
-               }
+data Triangle = Triangle { t1 :: Point
+                         , t2 :: Point
+                         , t3 :: Point
+                         }
 data Point = Point { px :: Float
                    , py :: Float
                    , pz :: Float
@@ -33,7 +34,7 @@ data Point = Point { px :: Float
                    }
 
 basicScene :: Scene
-basicScene = Scene points lines
+basicScene = Scene points lines triangles
     where
         points = map (\x -> pt2d x 300 white) [200, 250, 300, 350, 400, 450]
         lines = [ (pt2d 100 100 red, pt2d 200 120 white)
@@ -45,9 +46,11 @@ basicScene = Scene points lines
                 , (pt2d 100 100 red, pt2d  80 200 white)
                 , (pt2d 100 100 red, pt2d  80 000 white)
                 ]
+        triangles = [ Triangle (pt2d 400 100 red) (pt2d 450 50 white) (pt2d 470 150 blue) ]
         pt2d x y = Point (i2f x) (i2f y) 0.0
         red = Pixel 255 0 0
         white = Pixel 255 255 255
+        blue = Pixel 0 0 255
 
 
 --- DRAW ---
@@ -69,6 +72,7 @@ draw scfg scn = B.pack $ concatMap p2words $ runST $ do
     forM_ (scenePoints scn) $ \(Point fx fy _ col) -> setPixel' fx fy col
 
     forM_ (sceneLines scn) (drawLine setPixel)
+    forM_ (sceneTriangles scn) (drawTriangle setPixel)
 
     getElems screen
 
@@ -103,6 +107,12 @@ bresenham setpx (x1, y1, c1) (x2, y2, c2) =
             f = i2f (y2 - y1) / i2f (x2 - x1)
         in setpx x (y1 + f2i (f * dx)) (lerp c1 c2 p)
 
+drawTriangle :: Pen s -> Triangle -> ST s ()
+drawTriangle p (Triangle p1 p2 p3) = do
+    drawLine p (p1, p2)
+    drawLine p (p2, p3)
+    drawLine p (p3, p1)
+
 
 -- WANT: ByteString constructor that takes an array and a (e -> [Word8]).
 
@@ -113,7 +123,7 @@ f2w = fromIntegral . f2i
 
 instance Lerpy Float where lerp x y p = x*(p-1) + y*p
 instance Lerpy Word8 where
-    lerp x y p = f2w ((w2f x)*(1-p) + (w2f y)*p)
+    lerp x y p = f2w (w2f x * (1-p) + w2f y * p)
 instance Lerpy Pixel where
     lerp (Pixel r1 g1 b1) (Pixel r2 g2 b2) p =
         Pixel (lerp r1 r2 p) (lerp g1 g2 p) (lerp b1 b2 p)
