@@ -5,6 +5,7 @@ module Lib
     , update
     , basicScene
     , loadScene
+    , loadScene'
     , ScreenConfig (ScreenConfig)
     ) where
 
@@ -16,7 +17,7 @@ import GHC.Float
 import Control.Monad
 import Control.Monad.ST
 import Data.Array.ST
-import Text.Parsec (many)
+import Text.Parsec (many, ParseError)
 import Text.Parsec.Char
 import Text.Parsec.String
 import Text.Parsec.Combinator
@@ -41,8 +42,15 @@ data Point = Point { px :: Float
                    }
 type Line = (Point, Point)
 
-loadScene :: String -> IO Scene
-loadScene fn = do
+loadScene :: String -> IO (Either String Scene)
+loadScene fn = mapLeft show <$> parseFromFile parseScene fn
+    where mapLeft :: (a -> b) -> Either a r -> Either b r
+          mapLeft f (Left a) = Left $ f a
+          mapLeft f (Right r) = Right r
+
+-- Parse a scene from the selected file and throw an error on failure.
+loadScene' :: String -> IO Scene
+loadScene' fn = do
     scn <- parseFromFile parseScene fn
     case scn of
         Left err -> error $ show err

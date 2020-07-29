@@ -25,6 +25,7 @@ dependencies:
 - bytestring
 - array
 - parsec
+- fsnotify
 
 library:
   source-dirs: src
