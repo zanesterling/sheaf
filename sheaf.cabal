@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 7d4fab8be2e5ed0e31691df341d693035866ef6ef70845dcb16c2bae5143978b
+-- hash: e64c8617bc0101735f6d404f460049a10e498f21fd7f01748eaf15fa9edb0dd7
 
 name:           sheaf
 version:        0.1.0.0
@@ -36,6 +36,7 @@ library
       array
     , base >=4.7 && <5
     , bytestring
+    , parsec
     , sdl2
   default-language: Haskell2010
 
@@ -50,6 +51,7 @@ executable sheaf-exe
       array
     , base >=4.7 && <5
     , bytestring
+    , parsec
     , sdl2
     , sheaf
   default-language: Haskell2010
@@ -66,6 +68,7 @@ test-suite sheaf-test
       array
     , base >=4.7 && <5
     , bytestring
+    , parsec
     , sdl2
     , sheaf
   default-language: Haskell2010

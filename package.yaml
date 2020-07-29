@@ -24,6 +24,7 @@ dependencies:
 - sdl2
 - bytestring
 - array
+- parsec
 
 library:
   source-dirs: src

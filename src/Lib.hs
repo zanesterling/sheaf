@@ -2,7 +2,9 @@
 
 module Lib
     ( draw
+    , update
     , basicScene
+    , loadScene
     , ScreenConfig (ScreenConfig)
     ) where
 
@@ -14,6 +16,10 @@ import GHC.Float
 import Control.Monad
 import Control.Monad.ST
 import Data.Array.ST
+import Text.Parsec (many)
+import Text.Parsec.Char
+import Text.Parsec.String
+import Text.Parsec.Combinator
 
 f2i = float2Int
 i2f = int2Float
@@ -21,7 +27,7 @@ i2f = int2Float
 
 --- SCENE ---
 data Scene = Scene { scenePoints    :: [Point]
-                   , sceneLines     :: [(Point, Point)]
+                   , sceneLines     :: [Line]
                    , sceneTriangles :: [Triangle]
                    }
 data Triangle = Triangle { t1 :: Point
@@ -33,6 +39,60 @@ data Point = Point { px :: Float
                    , pz :: Float
                    , pcolor :: Color
                    }
+type Line = (Point, Point)
+
+loadScene :: String -> IO Scene
+loadScene fn = do
+    scn <- parseFromFile parseScene fn
+    case scn of
+        Left err -> error $ show err
+        Right scn -> return scn
+
+parseScene :: Parser Scene
+parseScene = do
+    points     <- many (parsePoint <* many endOfLine)
+    lines      <- many (parseLine <* many endOfLine)
+    triangles  <- many (parseTriangle <* many endOfLine)
+    eof
+    return $ Scene points lines triangles
+
+whitespace = many1 space
+
+parsePoint :: Parser Point
+parsePoint = do
+    char 'P'
+    x <- whitespace >> float
+    y <- whitespace >> float
+    z <- whitespace >> float
+    c <- whitespace >> parseColor
+    endOfLine
+    return $ Point x y z c
+parseColor :: Parser Color
+parseColor = do
+    char 'C'
+    r <- whitespace >> integer
+    g <- whitespace >> integer
+    b <- whitespace >> integer
+    return $ Pixel r g b
+
+parseLine :: Parser Line
+parseLine = do
+    char 'L' >> endOfLine
+    (,) <$> parsePoint <*> parsePoint
+
+parseTriangle :: Parser Triangle
+parseTriangle = do
+    char 'T' >> endOfLine
+    Triangle <$> parsePoint <*> parsePoint <*> parsePoint
+
+
+integer :: Read i => Integral i => Parser i
+integer = read <$> many1 digit
+float :: Parser Float
+float = do
+    ipart <- many1 digit 
+    fpart <- option "0" (char '.' >> many1 digit)
+    return $ read (ipart ++ "." ++ fpart)
 
 basicScene :: Scene
 basicScene = Scene points lines triangles
@@ -57,6 +117,8 @@ basicScene = Scene points lines triangles
         white = Pixel 255 255 255
         blue = Pixel 0 0 255
 
+update :: Scene -> Scene
+update scene = scene
 
 --- DRAW ---
 
@@ -90,7 +152,6 @@ drawPoint :: Pen s -> Point -> ST s ()
 drawPoint setpx (Point x y _ col) = setpx (f2i x) (f2i y) col
 
 
-type Line = (Point, Point)
 drawLine :: Pen s -> Line -> ST s ()
 drawLine setPixel (Point fx1 fy1 _ c1, Point fx2 fy2 _ c2) = do
     let (x1, y1, x2, y2) = (f2i fx1, f2i fy1, f2i fx2, f2i fy2)

@@ -24,22 +24,23 @@ main = do
     renderer <- SDL.createRenderer window (-1) rdrConfig
     texture <- createTexture renderer ARGB8888 TextureAccessStreaming dim
 
-    let loop = do
+    let loop scene = do
           SDL.clear renderer
-          SDL.updateTexture texture Nothing (draw (ScreenConfig (fromIntegral w) (fromIntegral h))
-                                                  basicScene) range
+          SDL.updateTexture texture Nothing (draw (ScreenConfig (fromIntegral w) (fromIntegral h)) scene) range
           SDL.copy renderer texture Nothing Nothing
           SDL.present renderer
 
+          -- TODO: make this a more accurate frame limiter (don't waste 20ms when we don't have 20 to spare)
           SDL.delay 20
 
           quit <- fmap (\ev -> case SDL.eventPayload ev of
               SDL.QuitEvent -> True
               SDL.KeyboardEvent e -> SDL.keyboardEventKeyMotion e == SDL.Pressed
               _ -> False) SDL.waitEvent
-          unless quit loop
+          unless quit $ loop $ update scene
 
-    loop
+    basicScene <- loadScene "assets/Basic.scn"
+    loop basicScene
 
     SDL.destroyTexture texture
     SDL.destroyRenderer renderer
